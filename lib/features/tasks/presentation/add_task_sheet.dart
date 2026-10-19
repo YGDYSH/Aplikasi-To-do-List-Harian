@@ -9,6 +9,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../data/db/app_database.dart';
 import '../providers/task_providers.dart';
 import 'label_picker_dialog.dart';
+import 'priority_picker_dialog.dart';
 
 Future<void> showAddTaskSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -45,6 +46,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
 
   DateTime? _dueDate;
   bool _hasTime = false;
+  int _priority = 0;
   Set<int> _labelIds = {};
 
   @override
@@ -87,6 +89,8 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     final initial = _timeOfDay ?? TimeOfDay.now();
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked == null) return;
+    // Izin notifikasi diminta saat pengguna pertama mengatur pengingat.
+    await ref.read(notificationServiceProvider).requestPermissionIfNeeded();
     setState(() {
       final date = _dueDate ?? DateTime.now();
       _dueDate = DateTime(
@@ -98,6 +102,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
       );
       _hasTime = true;
     });
+  }
+
+  Future<void> _pickPriorities() async {
+    final picked = await showPriorityPickerDialog(context);
+    if (picked == null) return;
+    setState(() => _priority = picked);
   }
 
   Future<void> _pickLabels() async {
@@ -120,6 +130,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
           note: _noteController.text,
           dueDate: _dueDate,
           hasTime: _hasTime,
+          priority: _priority,
+          // Pengingat otomatis mengikuti jam tugas bila jam dipilih.
+          reminderAt: _hasTime ? _dueDate : null,
           labelIds: _labelIds.toList(),
         );
 
@@ -226,7 +239,9 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               Text(AppStrings.reminderHint, style: TextStyles.caption),
             ],
             const SizedBox(height: 14),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _ActionIcon(
                   icon: Icons.calendar_today_rounded,
@@ -235,7 +250,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   active: _dueDate != null,
                   onTap: _pickDate,
                 ),
-                const SizedBox(width: 10),
                 _ActionIcon(
                   icon: Icons.schedule_rounded,
                   tooltip: AppStrings.timeIconTooltip,
@@ -245,7 +259,13 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                       ? () => setState(() => _hasTime = false)
                       : _pickTime,
                 ),
-                const SizedBox(width: 10),
+                _ActionIcon(
+                  icon: Icons.flag_rounded,
+                  tooltip: AppStrings.priorityIconTooltip,
+                  badge: priorityValueLabel(_priority),
+                  active: _priority > 0,
+                  onTap: _pickPriorities,
+                ),
                 _ActionIcon(
                   icon: Icons.label_rounded,
                   tooltip: AppStrings.labelIconTooltip,
@@ -255,7 +275,6 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   active: _labelIds.isNotEmpty,
                   onTap: _pickLabels,
                 ),
-                const SizedBox(width: 10),
                 _ActionIcon(
                   icon: Icons.notes_rounded,
                   tooltip: AppStrings.noteIconTooltip,

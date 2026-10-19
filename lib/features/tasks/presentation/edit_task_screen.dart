@@ -11,6 +11,7 @@ import 'package:aplikasi_to_do_list/data/db/app_database.dart';
 import 'package:aplikasi_to_do_list/data/repositories/task_repository.dart';
 import '../providers/task_providers.dart';
 import 'label_picker_dialog.dart';
+import 'priority_picker_dialog.dart';
 
 class EditTaskScreen extends ConsumerStatefulWidget {
   const EditTaskScreen({super.key, required this.taskId});
@@ -27,6 +28,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
 
   bool _initialised = false;
   bool _hasTime = false;
+  int _priority = 0;
   DateTime? _dueDate;
   Set<int> _labelIds = {};
 
@@ -49,6 +51,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       _hasTime = task.hasTime && !(local.hour == 0 && local.minute == 0);
     }
     _labelIds = {for (final label in item.labels) label.id};
+    _priority = task.priority;
   }
 
   Future<void> _save() async {
@@ -64,6 +67,9 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
           : _noteController.text.trim(),
       dueDate: _dueDate,
       hasTime: _hasTime,
+      priority: _priority,
+      // Pengingat mengikuti jam tugas bila jam dipilih.
+      reminderAt: _hasTime && _dueDate != null ? _dueDate : null,
     );
     await controller.setLabels(widget.taskId, _labelIds.toList());
 
@@ -188,6 +194,20 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                   },
                 ),
               ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: _EditActionTile(
+                  icon: Icons.flag_rounded,
+                  label: priorityValueLabel(_priority),
+                  value: null,
+                  selected: _priority > 0,
+                  onTap: () async {
+                    final picked = await showPriorityPickerDialog(context);
+                    if (picked == null) return;
+                    setState(() => _priority = picked);
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -279,6 +299,8 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       initialTime: initial ?? TimeOfDay.now(),
     );
     if (picked == null) return;
+    // Izin notifikasi diminta saat pengguna pertama mengatur pengingat.
+    await ref.read(notificationServiceProvider).requestPermissionIfNeeded();
     setState(() {
       final date = _dueDate ?? DateTime.now();
       _dueDate = DateTime(

@@ -11,7 +11,9 @@ import 'package:aplikasi_to_do_list/core/widgets/empty_state.dart';
 import 'package:aplikasi_to_do_list/core/widgets/gradient_header.dart';
 import 'package:aplikasi_to_do_list/core/widgets/task_card.dart';
 import 'package:aplikasi_to_do_list/data/repositories/task_repository.dart';
+import 'package:aplikasi_to_do_list/features/stats/presentation/stats_summary_card.dart';
 import '../providers/task_providers.dart';
+import 'sort_dialog.dart';
 
 class TaskListScreen extends ConsumerWidget {
   const TaskListScreen({super.key});
@@ -23,7 +25,7 @@ class TaskListScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TaskListHeader(sortOption: ref.watch(sortOptionProvider)),
+        const _TaskListHeader(),
         Expanded(
           child: groupedAsync.when(
             loading: () => const Center(
@@ -39,6 +41,12 @@ class TaskListScreen extends ConsumerWidget {
               if (state.isEmpty) {
                 return const EmptyState(body: AppStrings.tasksPlaceholder);
               }
+              if (state.sections.every(
+                (section) => section.tasks.every((task) => task.isDone),
+              )) {
+                // Halaman 11: semua tugas sudah selesai → kartu statistik.
+                return const StatsSummaryCard();
+              }
               return _GroupedTaskList(state: state);
             },
           ),
@@ -49,9 +57,7 @@ class TaskListScreen extends ConsumerWidget {
 }
 
 class _TaskListHeader extends StatelessWidget {
-  const _TaskListHeader({required this.sortOption});
-
-  final SortOption sortOption;
+  const _TaskListHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -68,18 +74,11 @@ class _TaskListHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Icon(
-                  Icons.grid_view_rounded,
-                  size: 20,
-                  color: AppColors.surface,
-                ),
-              ),
+              const _DashboardButton(),
               const SizedBox(width: 10),
               Expanded(child: _SearchField()),
               const SizedBox(width: 10),
-              _SortMenu(current: sortOption),
+              _SortMenu(),
             ],
           ),
           const SizedBox(height: 18),
@@ -93,6 +92,23 @@ class _TaskListHeader extends StatelessWidget {
           Text(AppStrings.tasksTitle, style: TextStyles.headerTitle),
         ],
       ),
+    );
+  }
+}
+
+class _DashboardButton extends StatelessWidget {
+  const _DashboardButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(
+        Icons.grid_view_rounded,
+        size: 20,
+        color: AppColors.surface,
+      ),
+      tooltip: AppStrings.dashboardTitle,
+      onPressed: () => context.go(AppRoutes.dashboard),
     );
   }
 }
@@ -141,45 +157,18 @@ class _SearchField extends ConsumerWidget {
   }
 }
 
-class _SortMenu extends ConsumerWidget {
-  const _SortMenu({required this.current});
-
-  final SortOption current;
+class _SortMenu extends StatelessWidget {
+  const _SortMenu();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<SortOption>(
+  Widget build(BuildContext context) {
+    return IconButton(
       icon: const Icon(
         Icons.more_horiz_rounded,
         color: AppColors.surface,
       ),
       tooltip: AppStrings.sortTitle,
-      color: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(AppColors.pageRadius)),
-      ),
-      onSelected: (option) => ref.read(sortOptionProvider.notifier).state = option,
-      itemBuilder: (context) => [
-        for (final option in SortOption.values)
-          PopupMenuItem<SortOption>(
-            value: option,
-            child: Row(
-              children: [
-                Icon(
-                  option == current
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 18,
-                  color: option == current
-                      ? AppColors.primary
-                      : AppColors.textMuted,
-                ),
-                const SizedBox(width: 10),
-                Text(sortOptionLabel(option), style: TextStyles.body),
-              ],
-            ),
-          ),
-      ],
+      onPressed: () => showSortDialog(context),
     );
   }
 }

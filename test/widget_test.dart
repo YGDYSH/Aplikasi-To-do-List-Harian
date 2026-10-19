@@ -27,6 +27,7 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
+          sharedPrefsProvider.overrideWithValue(prefs),
           profileControllerProvider.overrideWith((ref) => ProfileController(prefs: prefs)),
         ],
         child: const TugaskuApp(),
@@ -56,6 +57,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
+        sharedPrefsProvider.overrideWithValue(prefs),
         profileControllerProvider.overrideWith((ref) => ProfileController(prefs: prefs)),
       ],
     );
@@ -106,6 +108,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
+        sharedPrefsProvider.overrideWithValue(prefs),
         profileControllerProvider.overrideWith((ref) => ProfileController(prefs: prefs)),
       ],
     );
@@ -122,7 +125,8 @@ void main() {
     await tester.tap(find.text('Kalender'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Jadwalmu akan muncul di sini'), findsOneWidget);
+    expect(find.text('Kalender'), findsWidgets);
+    expect(find.text('TUGAS TERJADWAL'), findsOneWidget);
   });
 }
 

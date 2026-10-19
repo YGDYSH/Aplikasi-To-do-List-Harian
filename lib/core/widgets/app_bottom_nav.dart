@@ -60,8 +60,7 @@ class AppBottomNav extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                Positioned(
+                ),                Positioned(
                   left: 0,
                   right: 0,
                   top: -28,

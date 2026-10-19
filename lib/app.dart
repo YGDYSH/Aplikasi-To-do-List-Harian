@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/constants/app_strings.dart';
@@ -17,6 +18,17 @@ class TugaskuApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
+      // Lokasi bahasa Indonesia: picker tanggal/jam & table_calendar.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale(AppStrings.localeId, 'ID'),
+        Locale(AppStrings.localeId),
+      ],
+      locale: const Locale(AppStrings.localeId, 'ID'),
     );
   }
 }

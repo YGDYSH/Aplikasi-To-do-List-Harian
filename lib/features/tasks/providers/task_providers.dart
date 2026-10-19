@@ -6,6 +6,7 @@ import '../../../core/utils/task_grouping.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/providers.dart';
 import '../../../data/repositories/task_repository.dart';
+import '../../../services/notification_service.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -24,7 +25,34 @@ String sortOptionLabel(SortOption option) {
   }
 }
 
-final sortOptionProvider = StateProvider<SortOption>((_) => SortOption.dueDate);
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService.instance;
+});
+
+final sortOptionProvider =
+    NotifierProvider<SortOptionController, SortOption>(
+  SortOptionController.new,
+);
+
+/// Pilihan urutan tampilan dipersistenkan di shared_preferences.
+class SortOptionController extends Notifier<SortOption> {
+  static const _prefsKey = 'task_sort_option';
+
+  @override
+  SortOption build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    final index = prefs.getInt(_prefsKey);
+    if (index != null && index >= 0 && index < SortOption.values.length) {
+      return SortOption.values[index];
+    }
+    return SortOption.dueDate;
+  }
+
+  void select(SortOption option) {
+    state = option;
+    ref.read(sharedPrefsProvider).setInt(_prefsKey, option.index);
+  }
+}
 
 class GroupedTasksState {
   const GroupedTasksState({
@@ -155,8 +183,9 @@ class GroupedTasksController
     ref.read(searchQueryProvider.notifier).state = value;
   }
 
-  Future<void> toggleDone(int taskId, {required bool done}) {
-    return ref.read(taskRepositoryProvider).setTaskDone(taskId, done);
+  Future<void> toggleDone(int taskId, {required bool done}) async {
+    await ref.read(taskRepositoryProvider).setTaskDone(taskId, done);
+    await _syncReminderByTaskId(taskId);
   }
 
   Future<int> addTask({
@@ -164,15 +193,21 @@ class GroupedTasksController
     String? note,
     DateTime? dueDate,
     bool hasTime = false,
+    int priority = 0,
+    DateTime? reminderAt,
     List<int> labelIds = const [],
-  }) {
-    return ref.read(taskRepositoryProvider).insertTask(
+  }) async {
+    final id = await ref.read(taskRepositoryProvider).insertTask(
           title: title,
           note: note,
           dueDate: dueDate,
           hasTime: hasTime,
+          priority: priority,
+          reminderAt: reminderAt,
           labelIds: labelIds,
         );
+    await _syncReminderByTaskId(id);
+    return id;
   }
 
   Future<void> updateFields({
@@ -181,16 +216,35 @@ class GroupedTasksController
     String? note,
     DateTime? dueDate,
     bool hasTime = false,
-  }) {
-    return ref.read(taskRepositoryProvider).updateTask(
+    int priority = 0,
+    DateTime? reminderAt,
+  }) async {
+    await ref.read(taskRepositoryProvider).updateTask(
           taskId,
           TasksCompanion(
             title: Value(title.trim()),
             note: Value(note),
             dueDate: Value(dueDate?.toUtc()),
             hasTime: Value(hasTime && dueDate != null),
+            priority: Value(priority),
+            reminderAt: Value(reminderAt?.toUtc()),
           ),
         );
+    await _syncReminderByTaskId(taskId);
+  }
+
+  /// Jadwalkan ulang / batalkan pengingat setelah data tugas berubah.
+  Future<void> _syncReminderByTaskId(int taskId) async {
+    final task = await ref.read(taskRepositoryProvider).getTask(taskId);
+    if (task == null) {
+      await _cancelReminder(taskId);
+      return;
+    }
+    if (task.isDone || task.reminderAt == null) {
+      await _cancelReminder(taskId);
+    } else {
+      await _scheduleReminder(taskId, task.reminderAt!);
+    }
   }
 
   Future<void> setLabels(int taskId, List<int> labelIds) {
@@ -203,6 +257,7 @@ class GroupedTasksController
       task: item.task,
       labels: item.labels,
     );
+    await _cancelReminder(item.task.id);
     await ref.read(taskRepositoryProvider).deleteTask(item.task.id);
     _lastDeleted = snapshot;
   }
@@ -227,7 +282,21 @@ class GroupedTasksController
       newId,
       [for (final label in snapshot.labels) label.id],
     );
+    // Pengingat dipulihkan dengan id baru.
+    if (snapshot.task.reminderAt != null && !snapshot.task.isDone) {
+      await _scheduleReminder(newId, snapshot.task.reminderAt!);
+    }
     _lastDeleted = null;
+  }
+
+  Future<void> _scheduleReminder(int taskId, DateTime reminderAt) {
+    return ref
+        .read(notificationServiceProvider)
+        .scheduleTaskReminder(taskId: taskId, reminderAt: reminderAt);
+  }
+
+  Future<void> _cancelReminder(int taskId) {
+    return ref.read(notificationServiceProvider).cancelTaskReminder(taskId);
   }
 }
 
@@ -241,3 +310,14 @@ final taskDetailProvider =
 });
 
 String groupBadgeText(int count) => '$count ${AppStrings.taskUnit}';
+
+String priorityValueLabel(int priority) {
+  switch (priority) {
+    case 2:
+      return AppStrings.priorityHigh;
+    case 1:
+      return AppStrings.priorityMedium;
+    default:
+      return AppStrings.priorityLow;
+  }
+}

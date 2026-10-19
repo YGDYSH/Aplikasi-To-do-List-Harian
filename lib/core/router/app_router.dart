@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:aplikasi_to_do_list/core/theme/app_colors.dart';
 import 'package:aplikasi_to_do_list/core/widgets/app_bottom_nav.dart';
 import 'package:aplikasi_to_do_list/features/calendar/presentation/calendar_screen.dart';
+import 'package:aplikasi_to_do_list/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:aplikasi_to_do_list/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:aplikasi_to_do_list/features/profile/presentation/profile_screen.dart';
 import 'package:aplikasi_to_do_list/features/profile/providers/profile_provider.dart';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const profile = '/profile';
   static const tasks = '/home/tasks';
   static const calendar = '/home/calendar';
+  static const dashboard = '/home/dashboard';
   static const editTask = '/task/edit';
 }
 
@@ -77,6 +79,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.calendar,
                 builder: (context, state) => const CalendarScreen(),
+              ),
+            ],
+          ),
+          // Dasbor (Bagian 3.3) masuk shell agar tetap punya bottom bar
+          // + FAB, tapi tidak menjadi tab AppBottomNav.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.dashboard,
+                builder: (context, state) => const DashboardScreen(),
               ),
             ],
           ),

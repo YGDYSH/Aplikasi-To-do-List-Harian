@@ -38,7 +38,3 @@ final profileControllerProvider = ChangeNotifierProvider<ProfileController>(
     );
   },
 );
-
-final sharedPrefsProvider = FutureProvider<SharedPreferences>((ref) {
-  return SharedPreferences.getInstance();
-});
