@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +40,8 @@ class DashboardScreen extends ConsumerWidget {
                 _LabelsSection(),
                 const SizedBox(height: 12),
                 const _StatusSection(),
+                const SizedBox(height: 12),
+                const _DataSection(),
               ],
             ),
           ),
@@ -195,11 +198,11 @@ class _ShortcutCards extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: _ShortcutCard(
             icon: Icons.view_kanban_outlined,
             label: AppStrings.shortcutKanban,
-            enabled: false,
+            onTap: () => context.go(AppRoutes.kanban),
           ),
         ),
       ],
@@ -211,23 +214,20 @@ class _ShortcutCard extends StatelessWidget {
   const _ShortcutCard({
     required this.icon,
     required this.label,
-    this.enabled = true,
-    this.onTap,
+    required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final bool enabled;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = enabled ? AppColors.textPrimary : AppColors.textMuted;
     return Material(
       color: AppColors.surface,
       borderRadius: const BorderRadius.all(Radius.circular(AppColors.pageRadius)),
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
         borderRadius: const BorderRadius.all(
           Radius.circular(AppColors.pageRadius),
         ),
@@ -235,9 +235,9 @@ class _ShortcutCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Column(
             children: [
-              Icon(icon, size: 22, color: enabled ? AppColors.primary : textColor),
+              Icon(icon, size: 22, color: AppColors.primary),
               const SizedBox(height: 6),
-              Text(label, style: TextStyles.chip.copyWith(color: textColor)),
+              Text(label, style: TextStyles.chip),
             ],
           ),
         ),
@@ -623,6 +623,170 @@ class _StatusChip extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ---------- Seksi Data (cadangan clipboard) ----------
+
+class _DataSection extends ConsumerWidget {
+  const _DataSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.all(
+          Radius.circular(AppColors.pageRadius),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.dataSectionLabel.toUpperCase(),
+            style: TextStyles.sectionTitle.copyWith(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(AppColors.chipRadius),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: Text(AppStrings.exportDataButton),
+                  onPressed: () => _exportData(context, ref),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.surface,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(AppColors.chipRadius),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.paste_rounded, size: 18),
+                  label: Text(AppStrings.importDataButton),
+                  onPressed: () => _importData(context, ref),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    try {
+      final json = await ref.read(backupRepositoryProvider).exportJson();
+      await Clipboard.setData(ClipboardData(text: json));
+      if (!context.mounted) return;
+      _showSnack(context, AppStrings.exportDataDone);
+    } on Exception {
+      if (!context.mounted) return;
+      _showSnack(context, AppStrings.importNontaskJson);
+    }
+  }
+
+  Future<void> _importData(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          AppStrings.importDialogTitle,
+          style: TextStyles.screenTitle.copyWith(fontSize: 18),
+        ),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: AppStrings.importHint,
+            filled: true,
+            fillColor: AppColors.background,
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(
+                Radius.circular(AppColors.pageRadius),
+              ),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              AppStrings.cancelButton,
+              style: TextStyles.body.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              AppStrings.importConfirmButton,
+              style: TextStyles.body.copyWith(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final source = controller.text.trim();
+    if (source.isEmpty) return;
+    try {
+      final imported = await ref
+          .read(backupRepositoryProvider)
+          .importJson(source);
+      if (!context.mounted) return;
+      _showSnack(
+        context,
+        AppStrings.importDone(imported),
+      );
+    } on Object {
+      if (!context.mounted) return;
+      _showSnack(context, AppStrings.importNontaskJson);
+    }
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: TextStyles.body.copyWith(color: AppColors.surface),
+          ),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 }
 

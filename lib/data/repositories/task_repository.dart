@@ -164,6 +164,20 @@ class TaskRepository {
         );
   }
 
+  /// Ubah status tugas dari Kanban (Tahap 5): 0 belum mulai,
+  /// 1 dikerjakan, 2 selesai. isDone & completedAt tetap sinkron
+  /// (Kontrak Perilaku Bagian 8).
+  Future<void> setTaskStatus(int id, int status) async {
+    final isDone = status == 2;
+    await (_db.update(_db.tasks)..where((task) => task.id.equals(id))).write(
+          TasksCompanion(
+            status: Value(status),
+            isDone: Value(isDone),
+            completedAt: Value(isDone ? DateTime.now().toUtc() : null),
+          ),
+        );
+  }
+
   Future<void> deleteTask(int id) async {
     await (_db.delete(_db.tasks)..where((task) => task.id.equals(id))).go();
   }
@@ -219,5 +233,16 @@ class TaskRepository {
     return query
         .watch()
         .map((rows) => rows.map((row) => row.readTable(_db.labels)).toList());
+  }
+
+  /// Versi sekali-baca untuk duplikasi tugas berulang.
+  Future<List<Label>> getLabelsOfTask(int taskId) async {
+    final query = _db.select(_db.taskLabels).join(
+      [
+        innerJoin(_db.labels, _db.labels.id.equalsExp(_db.taskLabels.labelId)),
+      ],
+    )..where(_db.taskLabels.taskId.equals(taskId));
+    final rows = await query.get();
+    return [for (final row in rows) row.readTable(_db.labels)];
   }
 }

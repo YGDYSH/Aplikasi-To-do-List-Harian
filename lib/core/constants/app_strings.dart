@@ -115,4 +115,29 @@ class AppStrings {
 
   // Notifikasi pengingat
   static const reminderNotificationBody = 'Waktunya mengerjakan tugas ini';
+
+  // Tugas berulang (Tahap 5, Bagian 3.4)
+  static const repeatIconTooltip = 'Atur pengulangan';
+  static const repeatNone = 'Tidak Berulang';
+  static const repeatDaily = 'Harian';
+  static const repeatTwoDays = 'Setiap dua hari';
+  static const repeatWeekly = 'Mingguan';
+
+  // Tambah Cepat parsing (Tahap 5, Bagian 3.7)
+  static const quickParseIconTooltip = 'Contoh: "besok pukul 15.00"';
+
+  // Kanban (Tahap 5)
+  static const kanbanTitle = 'Kanban';
+
+  // Cadangan data JSON via clipboard (Tahap 5)
+  static const dataSectionLabel = 'Data';
+  static const exportDataButton = 'Ekspor Data';
+  static const importDataButton = 'Impor Data';
+  static const exportDataDone = 'Data disalin ke clipboard';
+  static const importDialogTitle = 'Impor Data';
+  static const importHint = 'Tempel JSON di sini...';
+  static const importConfirmButton = 'Impor';
+  static const importEmptyClipboard = 'Clipboard kosong';
+  static const importNontaskJson = 'Format JSON tidak dikenali';
+  static String importDone(int count) => '$count tugas diimpor';
 }

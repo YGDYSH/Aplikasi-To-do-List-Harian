@@ -263,6 +263,9 @@ class _DismissibleTaskCard extends ConsumerWidget {
               ),
         isDone: item.task.isDone,
         isOverdue: isOverdue,
+        repeatText: item.task.repeatRule == null
+            ? null
+            : repeatValueLabel(item.task.repeatRule),
         labels: [
           for (final label in item.labels)
             LabelChipData(
@@ -274,7 +277,7 @@ class _DismissibleTaskCard extends ConsumerWidget {
         onToggleDone: () => ref
             .read(groupedTasksProvider.notifier)
             .toggleDone(item.task.id, done: !item.task.isDone),
-        onOpenDetails: () => context.go(
+        onOpenDetails: () => context.push(
           '${AppRoutes.editTask}/${item.task.id}',
         ),
       ),

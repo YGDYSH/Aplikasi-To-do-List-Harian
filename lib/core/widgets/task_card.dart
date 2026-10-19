@@ -14,6 +14,7 @@ class TaskCard extends StatelessWidget {
     required this.isDone,
     this.isOverdue = false,
     this.labels = const [],
+    this.repeatText,
     this.onToggleDone,
     this.onOpenDetails,
   });
@@ -23,6 +24,9 @@ class TaskCard extends StatelessWidget {
   final bool isDone;
   final bool isOverdue;
   final List<LabelChipData> labels;
+
+  /// Keterangan berulang kecil (Tahap 5 — Bagian 3.4).
+  final String? repeatText;
   final VoidCallback? onToggleDone;
   final VoidCallback? onOpenDetails;
 
@@ -50,18 +54,36 @@ class TaskCard extends StatelessWidget {
             children: [
               _CheckCircle(isDone: isDone, onTap: onToggleDone),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: titleStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    if (dateText != null && dateText!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(dateText!, style: TextStyles.caption.copyWith(color: dateColor)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: titleStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      if (dateText != null && dateText!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(dateText!, style: TextStyles.caption.copyWith(color: dateColor)),
+                      ],
+                      if (repeatText != null && repeatText!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.repeat_rounded,
+                              size: 12,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              repeatText!,
+                              style: TextStyles.caption,
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

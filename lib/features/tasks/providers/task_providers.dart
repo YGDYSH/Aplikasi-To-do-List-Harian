@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/utils/repeat_rule.dart';
 import '../../../core/utils/task_grouping.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/providers.dart';
@@ -184,8 +185,48 @@ class GroupedTasksController
   }
 
   Future<void> toggleDone(int taskId, {required bool done}) async {
+    final previous = await ref.read(taskRepositoryProvider).getTask(taskId);
     await ref.read(taskRepositoryProvider).setTaskDone(taskId, done);
+    // Tugas berulang (Tahap 5): selesai → buat instance berikutnya.
+    if (done && previous != null && previous.repeatRule != null) {
+      await _spawnNextRepetition(previous);
+    }
     await _syncReminderByTaskId(taskId);
+  }
+
+  /// Memindahkan tugas antar kolom Kanban (status 0/1/2).
+  Future<void> moveTaskToStatus(int taskId, int status) async {
+    await ref.read(taskRepositoryProvider).setTaskStatus(taskId, status);
+    await _syncReminderByTaskId(taskId);
+  }
+
+  /// Duplikasi tugas berulang: tanggal (dan pengingat) maju sesuai aturan.
+  Future<void> _spawnNextRepetition(Task task) async {
+    final dueDate = task.dueDate;
+    final delta = repeatDeltaDays(task.repeatRule);
+    if (dueDate == null || delta <= 0) return;
+
+    final repo = ref.read(taskRepositoryProvider);
+    final shiftedDue = dueDate.add(Duration(days: delta));
+    final reminderAt = task.reminderAt;
+    final shiftedReminder =
+        reminderAt?.add(Duration(days: delta));
+    final labels = await repo.getLabelsOfTask(task.id);
+
+    final newId = await repo.insertTask(
+      title: task.title,
+      note: task.note,
+      dueDate: shiftedDue,
+      hasTime: task.hasTime,
+      priority: task.priority,
+      reminderAt: shiftedReminder,
+      repeatRule: task.repeatRule,
+      projectId: task.projectId,
+      labelIds: [for (final label in labels) label.id],
+    );
+    if (shiftedReminder != null) {
+      await _scheduleReminder(newId, shiftedReminder);
+    }
   }
 
   Future<int> addTask({
@@ -195,6 +236,7 @@ class GroupedTasksController
     bool hasTime = false,
     int priority = 0,
     DateTime? reminderAt,
+    String? repeatRule,
     List<int> labelIds = const [],
   }) async {
     final id = await ref.read(taskRepositoryProvider).insertTask(
@@ -204,6 +246,7 @@ class GroupedTasksController
           hasTime: hasTime,
           priority: priority,
           reminderAt: reminderAt,
+          repeatRule: isRepeatRuleValid(repeatRule) ? repeatRule : null,
           labelIds: labelIds,
         );
     await _syncReminderByTaskId(id);
@@ -218,6 +261,7 @@ class GroupedTasksController
     bool hasTime = false,
     int priority = 0,
     DateTime? reminderAt,
+    String? repeatRule,
   }) async {
     await ref.read(taskRepositoryProvider).updateTask(
           taskId,
@@ -228,6 +272,8 @@ class GroupedTasksController
             hasTime: Value(hasTime && dueDate != null),
             priority: Value(priority),
             reminderAt: Value(reminderAt?.toUtc()),
+            repeatRule:
+                Value(isRepeatRuleValid(repeatRule) ? repeatRule : null),
           ),
         );
     await _syncReminderByTaskId(taskId);
@@ -321,3 +367,5 @@ String priorityValueLabel(int priority) {
       return AppStrings.priorityLow;
   }
 }
+
+String repeatValueLabel(String? repeatRule) => repeatRuleLabel(repeatRule);

@@ -12,6 +12,7 @@ import 'package:aplikasi_to_do_list/data/repositories/task_repository.dart';
 import '../providers/task_providers.dart';
 import 'label_picker_dialog.dart';
 import 'priority_picker_dialog.dart';
+import 'repeat_picker_dialog.dart';
 
 class EditTaskScreen extends ConsumerStatefulWidget {
   const EditTaskScreen({super.key, required this.taskId});
@@ -29,6 +30,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   bool _initialised = false;
   bool _hasTime = false;
   int _priority = 0;
+  String? _repeatRule;
   DateTime? _dueDate;
   Set<int> _labelIds = {};
 
@@ -52,6 +54,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     }
     _labelIds = {for (final label in item.labels) label.id};
     _priority = task.priority;
+    _repeatRule = task.repeatRule;
   }
 
   Future<void> _save() async {
@@ -68,6 +71,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
       dueDate: _dueDate,
       hasTime: _hasTime,
       priority: _priority,
+      repeatRule: _repeatRule,
       // Pengingat mengikuti jam tugas bila jam dipilih.
       reminderAt: _hasTime && _dueDate != null ? _dueDate : null,
     );
@@ -205,6 +209,28 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                     final picked = await showPriorityPickerDialog(context);
                     if (picked == null) return;
                     setState(() => _priority = picked);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Flexible(
+                child: _EditActionTile(
+                  icon: Icons.repeat_rounded,
+                  label: _repeatRule == null
+                      ? AppStrings.repeatNone
+                      : repeatValueLabel(_repeatRule),
+                  value: null,
+                  selected: _repeatRule != null,
+                  onTap: () async {
+                    final picked = await showRepeatPickerDialog(context);
+                    if (picked == null) return; // dibatalkan
+                    setState(() {
+                      _repeatRule = picked.isEmpty ? null : picked;
+                    });
                   },
                 ),
               ),

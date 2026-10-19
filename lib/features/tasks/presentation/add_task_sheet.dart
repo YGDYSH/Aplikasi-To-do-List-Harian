@@ -7,9 +7,11 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../data/db/app_database.dart';
+import '../../../core/utils/task_parser.dart';
 import '../providers/task_providers.dart';
 import 'label_picker_dialog.dart';
 import 'priority_picker_dialog.dart';
+import 'repeat_picker_dialog.dart';
 
 Future<void> showAddTaskSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -47,6 +49,7 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   DateTime? _dueDate;
   bool _hasTime = false;
   int _priority = 0;
+  String? _repeatRule;
   Set<int> _labelIds = {};
 
   @override
@@ -110,6 +113,12 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
     setState(() => _priority = picked);
   }
 
+  Future<void> _pickRepeat() async {
+    final picked = await showRepeatPickerDialog(context);
+    if (picked == null) return; // dibatalkan
+    setState(() => _repeatRule = picked.isEmpty ? null : picked);
+  }
+
   Future<void> _pickLabels() async {
     final labels = ref.read(labelsStreamProvider).value ?? const <Label>[];
     final result = await showLabelPickerDialog(
@@ -122,17 +131,33 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
   }
 
   Future<void> _submit() async {
-    final title = _titleController.text.trim();
-    if (title.isEmpty) return;
+    final controller = _titleController.text;
+    final rawTitle = controller.trim();
+    if (rawTitle.isEmpty) return;
+
+    // Parsing bahasa natural dipakai hanya bila tanggal belum dipilih
+    // lewat picker, sehingga pilihan manual selalu menang.
+    var effectiveTitle = rawTitle;
+    var effectiveDueDate = _dueDate;
+    var effectiveHasTime = _hasTime;
+    if (_dueDate == null) {
+      final parsed = parseTaskPhrase(rawTitle, now: DateTime.now());
+      if (parsed.dueDate != null || parsed.title != rawTitle) {
+        effectiveTitle = parsed.title;
+        effectiveDueDate = parsed.dueDate;
+        effectiveHasTime = parsed.hasTime;
+      }
+    }
 
     await ref.read(groupedTasksProvider.notifier).addTask(
-          title: title,
+          title: effectiveTitle,
           note: _noteController.text,
-          dueDate: _dueDate,
-          hasTime: _hasTime,
+          dueDate: effectiveDueDate,
+          hasTime: effectiveHasTime,
           priority: _priority,
+          repeatRule: _repeatRule,
           // Pengingat otomatis mengikuti jam tugas bila jam dipilih.
-          reminderAt: _hasTime ? _dueDate : null,
+          reminderAt: effectiveHasTime ? effectiveDueDate : null,
           labelIds: _labelIds.toList(),
         );
 
@@ -238,6 +263,11 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
               const SizedBox(height: 8),
               Text(AppStrings.reminderHint, style: TextStyles.caption),
             ],
+            const SizedBox(height: 6),
+            Text(
+              AppStrings.quickParseIconTooltip,
+              style: TextStyles.caption,
+            ),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -265,6 +295,15 @@ class _AddTaskSheetState extends ConsumerState<AddTaskSheet> {
                   badge: priorityValueLabel(_priority),
                   active: _priority > 0,
                   onTap: _pickPriorities,
+                ),
+                _ActionIcon(
+                  icon: Icons.repeat_rounded,
+                  tooltip: AppStrings.repeatIconTooltip,
+                  badge: _repeatRule == null
+                      ? ''
+                      : repeatValueLabel(_repeatRule),
+                  active: _repeatRule != null,
+                  onTap: _pickRepeat,
                 ),
                 _ActionIcon(
                   icon: Icons.label_rounded,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'db/app_database.dart';
+import 'repositories/backup_repository.dart';
 import 'repositories/label_repository.dart';
 import 'repositories/project_repository.dart';
 import 'repositories/task_repository.dart';
@@ -22,6 +23,11 @@ final labelRepositoryProvider = Provider<LabelRepository>((ref) {
 
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
   return ProjectRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Cadangan JSON (clipboard) — Tahap 5.
+final backupRepositoryProvider = Provider<BackupRepository>((ref) {
+  return BackupRepository(ref.watch(appDatabaseProvider));
 });
 
 /// Semua tugas tanpa filter pencarian (dipakai Dasbor & statistik).

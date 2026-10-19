@@ -11,6 +11,7 @@ import 'package:aplikasi_to_do_list/features/profile/presentation/profile_screen
 import 'package:aplikasi_to_do_list/features/profile/providers/profile_provider.dart';
 import 'package:aplikasi_to_do_list/features/tasks/presentation/add_task_sheet.dart';
 import 'package:aplikasi_to_do_list/features/tasks/presentation/edit_task_screen.dart';
+import 'package:aplikasi_to_do_list/features/tasks/presentation/kanban_screen.dart';
 import 'package:aplikasi_to_do_list/features/tasks/presentation/task_list_screen.dart';
 
 class AppRoutes {
@@ -21,6 +22,7 @@ class AppRoutes {
   static const tasks = '/home/tasks';
   static const calendar = '/home/calendar';
   static const dashboard = '/home/dashboard';
+  static const kanban = '/home/kanban';
   static const editTask = '/task/edit';
 }
 
@@ -89,6 +91,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.dashboard,
                 builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          // Kanban (Tahap 5) — juga dalam shell agar punya bottom bar + FAB.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.kanban,
+                builder: (context, state) => const KanbanScreen(),
               ),
             ],
           ),
