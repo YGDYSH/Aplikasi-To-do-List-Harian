@@ -4,6 +4,21 @@
 
 ---
 
+## CATATAN PENTING — STATUS PENGERJAAN
+
+- **Tahap 1 (Fondasi) sudah SELESAI pada hari ini, Jumat 16 Oktober 2026.**
+  - Isi tahap: dependency Bagian 4 terpasang, struktur folder Bagian 6 dibuat, `AppColors`/`AppTheme`/`AppStrings`/`TextStyles`, font Plus Jakarta Sans didaftarkan, `app_router.dart` (rute placeholder), `AppBottomNav` + FAB pensil, dan `GradientHeader`.
+  - Hasil verifikasi saat penyelesaian: `flutter analyze` = **0 issue**, `flutter test` = **semua lulus**, `flutter build bundle` = sukses.
+  - Catatan teknis: paket `timezone` memakai `^0.10.1` (versi 1.x tidak tersedia di pub.dev); font Plus Jakarta Sans disimpan sebagai file statis di `assets/fonts/` (diunduh sekali saat pengembangan, bukan saat runtime).
+- **Tahap 2 (Data Lokal) sudah SELESAI pada Senin, 19 Oktober 2026.**
+  - Isi tahap: tabel drift `Tasks`/`Labels`/`TaskLabels`/`Projects` (`lib/data/db/tables.dart`), `app_database.dart` dengan seed 5 label (Belajar, Olahraga, Kerja, Pribadi, Kebiasaan), `TaskRepository` + `LabelRepository` (CRUD, stream, pencarian tak peka huruf), provider Riverpod (`lib/data/providers.dart`), `task_grouping.dart` + `date_utils.dart` (fungsi murni), serta unit test `test/task_grouping_test.dart` dan `test/task_repository_test.dart` (drift in-memory + uji persistensi file).
+  - Hasil verifikasi saat penyelesaian: `dart run build_runner build` = **sukses**, `flutter analyze` = **0 issue**, `flutter test` = **26 test semua lulus**.
+  - Catatan teknis: `dueDate`/`reminderAt`/`completedAt`/`createdAt` **disimpan UTC** dan repositori menormalisasi hasil bacaan drift (lokal) kembali ke UTC — tampilkan WIB di UI; `Labels.name` memakai constraint `UNIQUE` lewat `text().unique()` (drift 2.34 tidak punya `uniqueKey()`; override `uniqueKeys` berformat lama diabaikan generator); API grouping yang dipakai UI adalah `groupTasks(tasks, now: ...)` → `TaskGroupSection(key, title, tasks, overdueTaskIds)`; `main.dart` membuka `AppDatabase` dan meng-override `appDatabaseProvider` sebelum `runApp`. Peringatan drift "multiple databases" hanya muncul di debug test persistensi (dua instance dibuat berurutan) — aman.
+- **Tahap 3, 4, dan 5 belum dikerjakan.** Lanjutkan berurutan sesuai Bagian 9 — jangan melompati tahap.
+- Aplikasi tetap 100% offline: tidak ada env/`.env`, API key, backend, atau paket autentikasi yang ditambahkan.
+
+---
+
 ## 0. Aturan Kerja Agent (WAJIB DIPATUHI)
 
 1. **Kerjakan satu tahap pada satu waktu** (lihat Bagian 9). Jangan melompat ke tahap berikutnya sebelum diminta.
@@ -23,14 +38,14 @@
 
 ## 1. Ringkasan Produk
 
-| Item | Nilai |
-|---|---|
-| Nama aplikasi | Tugasku |
-| Platform | Android (prioritas). iOS tidak dikerjakan dulu |
-| Bahasa UI | Indonesia, locale `id_ID` |
-| Backend | **Tidak ada.** Semua data tersimpan lokal |
-| Gaya visual | Ungu/indigo, kartu putih membulat, header gradien ungu dengan sudut bawah melengkung |
-| Font | Plus Jakarta Sans (letakkan di `assets/fonts/`, jangan unduh saat runtime) |
+| Item          | Nilai                                                                                |
+| ------------- | ------------------------------------------------------------------------------------ |
+| Nama aplikasi | Tugasku                                                                              |
+| Platform      | Android (prioritas). iOS tidak dikerjakan dulu                                       |
+| Bahasa UI     | Indonesia, locale `id_ID`                                                            |
+| Backend       | **Tidak ada.** Semua data tersimpan lokal                                            |
+| Gaya visual   | Ungu/indigo, kartu putih membulat, header gradien ungu dengan sudut bawah melengkung |
+| Font          | Plus Jakarta Sans (letakkan di `assets/fonts/`, jangan unduh saat runtime)           |
 
 ---
 
@@ -50,6 +65,7 @@ Desain Stitch memiliki layar Masuk/Daftar dan tombol Facebook/Google/Apple. Kare
 Navigasi utama: **bottom bar** dengan 2 tab (**Daftar**, **Kalender**) dan **FAB bulat ungu berikon pensil** di tengah (membuka bottom sheet Tambah Tugas).
 
 ### 3.1 Onboarding (Halaman 1)
+
 - Latar putih dengan ornamen lingkaran ungu pucat di kanan bawah.
 - Tengah-atas: kotak ungu membulat (radius ±28) berisi ikon centang putih, dengan titik/bintang dekoratif kecil.
 - Bawah-kiri: judul **"Selesaikan Tugasmu"** (tebal), subjudul "Hanya satu sentuhan untuk mulai merencanakan aktivitas harianmu."
@@ -57,9 +73,11 @@ Navigasi utama: **bottom bar** dengan 2 tab (**Daftar**, **Kalender**) dan **FAB
 - Kanan bawah: tombol bulat ungu dengan ikon panah → lanjut ke Profil Lokal.
 
 ### 3.2 Profil Lokal (berdasarkan Halaman 2 & 5)
+
 Lihat Bagian 2. Field nama dengan label kecil kapital "NAMA". Tombol "Mulai" ungu lebar. Tanpa login sosial, tanpa "Lupa kata sandi".
 
 ### 3.3 Dasbor (Halaman 3)
+
 - **Header gradien ungu** (sudut bawah radius ±32): avatar bulat kiri atas, ikon pengaturan kanan atas, teks kecil "Hari ini, 1 Mei" (tanggal dinamis), judul besar **"Dasbor"**.
 - **3 kartu pintasan** sejajar: Daftar, Kalender, Kanban (ikon + label). Kanban boleh dinonaktifkan sampai Tahap 5.
 - **Seksi "Proyek"** (bisa dilipat, tombol + di kanan): baris kartu berisi ikon, nama proyek, badge jumlah tugas.
@@ -68,6 +86,7 @@ Lihat Bagian 2. Field nama dengan label kecil kapital "NAMA". Tombol "Mulai" ung
 - Bottom bar + FAB.
 
 ### 3.4 Tugasku / Daftar (Halaman 4 & 6)
+
 - Header gradien: ikon grid kiri, **kolom pencarian** pil putih transparan ("Cari tugas..."), ikon menu "⋯" kanan (membuka dialog Urutkan), teks tanggal, judul **"Tugasku"**.
 - Daftar dikelompokkan dengan judul seksi kapital kecil + badge jumlah ("2 TUGAS"): **Hari Ini**, **Besok**, **Minggu Ini**, lalu **Nanti** dan **Tanpa Tanggal** bila ada.
 - **Kartu tugas:** lingkaran centang (outline ungu) di kiri, judul tebal, tanggal kecil di bawah judul (mis. "1 Mei"), chip label berwarna di kanan.
@@ -77,9 +96,11 @@ Lihat Bagian 2. Field nama dengan label kecil kapital "NAMA". Tombol "Mulai" ung
 - Tugas berulang menampilkan keterangan kecil (mis. "Setiap dua hari") — Tahap 5.
 
 ### 3.5 Dialog Urutkan (Halaman 7)
+
 Dialog modal putih membulat, judul "Urutkan", tombol tutup (×), 4 opsi radio: **Tanggal Jatuh Tempo, Prioritas, Label, Proyek**. Latar belakang diburamkan. Pilihan disimpan (provider/`shared_preferences`).
 
 ### 3.6 Kalender (Halaman 8, 9, 11)
+
 - Header gradien: pencarian "Cari jadwal atau tugas...", judul **"Kalender"**, lalu **pemilih mode tampilan** (4 ikon segmented): Bulan, Minggu, dan mode lain (Agenda/Daftar). Implementasi awal: **Bulan** dan **Minggu** saja.
 - **Mode Bulan:** kartu putih berisi kalender bulanan (header "Mei 2024" dengan panah), hari terpilih lingkaran ungu terisi, titik kecil di bawah tanggal yang punya tugas. Di bawahnya seksi **"Tugas Terjadwal"** + badge tanggal dan jumlah tugas, daftar kartu tugas dengan ikon jam dan rentang waktu (mis. "14:00 – 15:00 WIB").
 - **Mode Minggu:** strip 7 hari (M S S R K J S), baris info "N tugas dijadwalkan hari ini" + badge nama hari, lalu "Jadwal Tugas" (+ tautan "Lihat Semua").
@@ -87,6 +108,7 @@ Dialog modal putih membulat, judul "Urutkan", tombol tutup (×), 4 opsi radio: *
 - Zona waktu tampilan: **WIB** (`Asia/Jakarta`), format jam 24 jam.
 
 ### 3.7 Tambah Tugas Cepat (Halaman 10)
+
 - Bottom sheet naik dari bawah bersama keyboard, latar belakang diburamkan, gelembung kecil "Apa yang ingin kamu kerjakan?".
 - Satu `TextField` judul + tombol kirim bulat ungu (ikon panah atas).
 - Baris ikon aksi: **tanggal/jam**, **prioritas**, **label**, **catatan**.
@@ -97,15 +119,15 @@ Dialog modal putih membulat, judul "Urutkan", tombol tutup (×), 4 opsi radio: *
 
 ## 4. Tech Stack (HANYA ini)
 
-| Kebutuhan | Paket |
-|---|---|
-| State management | `flutter_riverpod` |
-| Database lokal | `drift`, `sqlite3_flutter_libs`, `path_provider`, `path`; dev: `drift_dev`, `build_runner` |
-| Navigasi | `go_router` |
-| Kalender | `table_calendar` |
-| Notifikasi lokal | `flutter_local_notifications`, `timezone`, `flutter_timezone` |
-| Format tanggal | `intl` (locale `id_ID`, panggil `initializeDateFormatting`) |
-| Pengaturan sederhana | `shared_preferences` |
+| Kebutuhan            | Paket                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| State management     | `flutter_riverpod`                                                                         |
+| Database lokal       | `drift`, `sqlite3_flutter_libs`, `path_provider`, `path`; dev: `drift_dev`, `build_runner` |
+| Navigasi             | `go_router`                                                                                |
+| Kalender             | `table_calendar`                                                                           |
+| Notifikasi lokal     | `flutter_local_notifications`, `timezone`, `flutter_timezone`                              |
+| Format tanggal       | `intl` (locale `id_ID`, panggil `initializeDateFormatting`)                                |
+| Pengaturan sederhana | `shared_preferences`                                                                       |
 
 Dilarang: Firebase, `http`/`dio`, paket autentikasi, paket analitik.
 
@@ -137,15 +159,15 @@ class AppColors {
 }
 ```
 
-| Token | Nilai |
-|---|---|
-| Radius kartu | 16 |
-| Radius header (sudut bawah) | 32 |
-| Radius tombol | 14 |
-| Radius chip | 999 |
-| Padding halaman | 16–20 |
-| Header | `LinearGradient` primaryLight → primary, dengan 1–2 lingkaran transparan dekoratif |
-| Bayangan | lembut, blur besar, opasitas rendah |
+| Token                       | Nilai                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| Radius kartu                | 16                                                                                 |
+| Radius header (sudut bawah) | 32                                                                                 |
+| Radius tombol               | 14                                                                                 |
+| Radius chip                 | 999                                                                                |
+| Padding halaman             | 16–20                                                                              |
+| Header                      | `LinearGradient` primaryLight → primary, dengan 1–2 lingkaran transparan dekoratif |
+| Bayangan                    | lembut, blur besar, opasitas rendah                                                |
 
 Buat satu `ThemeData` di `app_theme.dart` (Material 3, `colorSchemeSeed` boleh dipakai lalu di-override). Mode gelap bukan target awal.
 
@@ -211,10 +233,11 @@ Setiap `feature` memiliki subfolder `presentation/` (screen, widget) dan `provid
 **Seed saat pertama dijalankan:** label Belajar, Olahraga, Kerja, Pribadi, Kebiasaan (+ Studi bila dipakai desain). Proyek contoh tidak perlu di-seed.
 
 **Aturan pengelompokan** (`task_grouping.dart`, fungsi murni + unit test):
-- *Hari Ini*: dueDate pada tanggal hari ini; tugas **terlambat** (belum selesai, sebelum hari ini) juga masuk sini dengan penanda merah.
-- *Besok*: tanggal besok.
-- *Minggu Ini*: setelah besok sampai akhir minggu (Minggu).
-- *Nanti*: setelah minggu ini. *Tanpa Tanggal*: dueDate null.
+
+- _Hari Ini_: dueDate pada tanggal hari ini; tugas **terlambat** (belum selesai, sebelum hari ini) juga masuk sini dengan penanda merah.
+- _Besok_: tanggal besok.
+- _Minggu Ini_: setelah besok sampai akhir minggu (Minggu).
+- _Nanti_: setelah minggu ini. _Tanpa Tanggal_: dueDate null.
 
 ---
 
@@ -233,23 +256,28 @@ Setiap `feature` memiliki subfolder `presentation/` (screen, widget) dan `provid
 
 Tiap tahap punya **Kriteria Selesai**. Jangan anggap selesai sebelum semua terpenuhi.
 
-### Tahap 1 — Fondasi
+### Tahap 1 — Fondasi (SELESAI — 16 Oktober 2026)
+
 **Kerjakan:** tambah dependency (Bagian 4), buat struktur folder (Bagian 6), `AppColors`, `AppTheme`, `AppStrings`, daftarkan font, `app_router.dart` dengan rute placeholder, `AppBottomNav` + FAB, widget `GradientHeader`.
 **Selesai jika:** aplikasi berjalan menampilkan header gradien dan bottom bar dengan 2 tab placeholder; `flutter analyze` bersih.
 
-### Tahap 2 — Data Lokal
+### Tahap 2 — Data Lokal (SELESAI — 19 Oktober 2026)
+
 **Kerjakan:** tabel drift (Bagian 7), `app_database.dart`, `TaskRepository` & `LabelRepository` (CRUD + stream), seed label, provider Riverpod, unit test untuk `task_grouping.dart` dan repository (database in-memory).
 **Selesai jika:** `dart run build_runner build` sukses, test lulus, data tetap ada setelah restart aplikasi.
 
 ### Tahap 3 — MVP Layar Inti
+
 **Kerjakan:** Onboarding, Profil Lokal, layar Tugasku (grup Hari Ini/Besok/Minggu Ini, `TaskCard`, `LabelChip`), bottom sheet Tambah Tugas (judul, tanggal, jam, label, catatan), centang selesai, swipe-hapus + Urungkan, layar edit tugas, empty state.
 **Selesai jika:** semua perilaku Bagian 8 untuk centang/hapus/tambah/ubah berjalan; tampilan sesuai Bagian 3.1–3.4; tidak ada string hardcode di widget.
 
 ### Tahap 4 — Fitur Pelengkap
+
 **Kerjakan:** Dasbor (Proyek, Label, Status, jumlah dinamis), pencarian, dialog Urutkan, prioritas, kalender Bulan & Minggu (`table_calendar`, titik penanda, daftar Tugas Terjadwal), notifikasi pengingat, statistik pada empty state (Terselesaikan, Produktivitas = selesai/total tugas hari itu).
 **Selesai jika:** semua layar di Bagian 3 (kecuali bagian yang ditandai Tahap 5) berfungsi dengan data nyata; pengingat muncul pada waktunya.
 
 ### Tahap 5 — Opsional (hanya bila diminta)
+
 Tugas berulang, tampilan Kanban, parsing bahasa natural di Tambah Cepat, ekspor/impor data JSON, ikon aplikasi (`flutter_launcher_icons`), splash screen.
 
 ---

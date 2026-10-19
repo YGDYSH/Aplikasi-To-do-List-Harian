@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:aplikasi_to_do_list/core/constants/app_strings.dart';
 import 'package:aplikasi_to_do_list/core/router/app_router.dart';
 import 'package:aplikasi_to_do_list/core/theme/app_colors.dart';
 import 'package:aplikasi_to_do_list/core/theme/text_styles.dart';
+import 'package:aplikasi_to_do_list/features/profile/providers/profile_provider.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -69,13 +71,6 @@ class OnboardingScreen extends StatelessWidget {
                     style: TextStyles.bodyMuted,
                   ),
                   const SizedBox(height: 32),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      AppStrings.onboardingPage,
-                      style: TextStyles.caption,
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -113,7 +108,12 @@ class OnboardingScreen extends StatelessWidget {
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.surface,
                           shape: const CircleBorder(),
-                          onPressed: () => context.go(AppRoutes.profile),
+                          onPressed: () {
+                            ref
+                                .read(profileControllerProvider.notifier)
+                                .completeOnboarding();
+                            context.go(AppRoutes.profile);
+                          },
                           child: const Icon(Icons.arrow_forward_rounded),
                         ),
                       ),
