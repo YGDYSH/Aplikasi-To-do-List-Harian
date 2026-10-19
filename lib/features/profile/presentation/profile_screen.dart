@@ -36,7 +36,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final profile = ref.watch(profileControllerProvider);
     if (!_initialised) {
       _initialised = true;
-      _nameController.text = profile.userName ?? '';
+      _nameController.text = profile.userName;
     }
 
     return Scaffold(

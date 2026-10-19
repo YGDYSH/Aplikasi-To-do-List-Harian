@@ -14,7 +14,11 @@
   - Isi tahap: tabel drift `Tasks`/`Labels`/`TaskLabels`/`Projects` (`lib/data/db/tables.dart`), `app_database.dart` dengan seed 5 label (Belajar, Olahraga, Kerja, Pribadi, Kebiasaan), `TaskRepository` + `LabelRepository` (CRUD, stream, pencarian tak peka huruf), provider Riverpod (`lib/data/providers.dart`), `task_grouping.dart` + `date_utils.dart` (fungsi murni), serta unit test `test/task_grouping_test.dart` dan `test/task_repository_test.dart` (drift in-memory + uji persistensi file).
   - Hasil verifikasi saat penyelesaian: `dart run build_runner build` = **sukses**, `flutter analyze` = **0 issue**, `flutter test` = **26 test semua lulus**.
   - Catatan teknis: `dueDate`/`reminderAt`/`completedAt`/`createdAt` **disimpan UTC** dan repositori menormalisasi hasil bacaan drift (lokal) kembali ke UTC — tampilkan WIB di UI; `Labels.name` memakai constraint `UNIQUE` lewat `text().unique()` (drift 2.34 tidak punya `uniqueKey()`; override `uniqueKeys` berformat lama diabaikan generator); API grouping yang dipakai UI adalah `groupTasks(tasks, now: ...)` → `TaskGroupSection(key, title, tasks, overdueTaskIds)`; `main.dart` membuka `AppDatabase` dan meng-override `appDatabaseProvider` sebelum `runApp`. Peringatan drift "multiple databases" hanya muncul di debug test persistensi (dua instance dibuat berurutan) — aman.
-- **Tahap 3, 4, dan 5 belum dikerjakan.** Lanjutkan berurutan sesuai Bagian 9 — jangan melompati tahap.
+- **Tahap 3 (MVP Layar Inti) sudah SELESAI pada Senin, 19 Oktober 2026.**
+  - Isi tahap: alur `Onboarding → Profil Lokal → Tugasku` dengan redirect `GoRouter` berbasis flag `onboarding_done`/`user_name` (`shared_preferences`, provider `ProfileController`); layar Tugasku dengan header gradien (kolom pencarian fungsional, menu ⋯ Urutkan dengan 4 pilihan — persistensi dialog formal datang di Tahap 4), seksi kelompok (judul kapital + badge jumlah) dari `groupTasks`, `TaskCard` (lingkaran centang, judul, tanggal via `intl` locale `id`, `LabelChip`), swipe-kiri hapus + Snackbar Urungkan (4 detik) yang memulihkan tugas beserta tautan labelnya, bottom sheet Tambah Tugas (judul, tanggal, jam, label multi-pilih, catatan) dengan backdrop blur, layar Ubah Tugas (`/task/edit/:id`), `EmptyState`.
+  - Hasil verifikasi saat penyelesaian: `flutter analyze` = **0 issue**, `flutter test` = **28 test semua lulus** (termasuk alur onboarding, daftar terelompokkan, centang via UI, tab Kalender).
+  - Catatan teknis: tanggal disimpan UTC dan dibaca ulang sebagai UTC oleh repositori; UI mengonversi `toLocal()` saat menampilkan. FAB bottom nav membuka sheet Tambah; centang tugas dan pengurangan di dalam seksi berfungsi penuh. Sort menu saat ini diurutkan dalam memori (state Riverpod), dialog modal + simpan `shared_preferences` disesuaikan di Tahap 4. Picker Material menampilkan teks lokal perangkat (lokal `id_ID` penuh menyusul bersama `localizationsDelegates` di Tahap 4).
+- **Tahap 4 dan 5 belum dikerjakan.** Lanjutkan berurutan sesuai Bagian 9 — jangan melompati tahap.
 - Aplikasi tetap 100% offline: tidak ada env/`.env`, API key, backend, atau paket autentikasi yang ditambahkan.
 
 ---
@@ -266,7 +270,7 @@ Tiap tahap punya **Kriteria Selesai**. Jangan anggap selesai sebelum semua terpe
 **Kerjakan:** tabel drift (Bagian 7), `app_database.dart`, `TaskRepository` & `LabelRepository` (CRUD + stream), seed label, provider Riverpod, unit test untuk `task_grouping.dart` dan repository (database in-memory).
 **Selesai jika:** `dart run build_runner build` sukses, test lulus, data tetap ada setelah restart aplikasi.
 
-### Tahap 3 — MVP Layar Inti
+### Tahap 3 — MVP Layar Inti (SELESAI — 19 Oktober 2026)
 
 **Kerjakan:** Onboarding, Profil Lokal, layar Tugasku (grup Hari Ini/Besok/Minggu Ini, `TaskCard`, `LabelChip`), bottom sheet Tambah Tugas (judul, tanggal, jam, label, catatan), centang selesai, swipe-hapus + Urungkan, layar edit tugas, empty state.
 **Selesai jika:** semua perilaku Bagian 8 untuk centang/hapus/tambah/ubah berjalan; tampilan sesuai Bagian 3.1–3.4; tidak ada string hardcode di widget.

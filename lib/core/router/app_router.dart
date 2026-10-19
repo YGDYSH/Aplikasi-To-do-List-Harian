@@ -23,7 +23,7 @@ class AppRoutes {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final profile = ref.watch(profileControllerProvider);
+  final profile = ref.watch(profileControllerProvider.notifier);
 
   final router = GoRouter(
     initialLocation: AppRoutes.onboarding,
@@ -33,16 +33,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isOnboarding = location == AppRoutes.onboarding;
       final isProfile = location == AppRoutes.profile;
 
-      if (!profile.onboardingDone && !isOnboarding) {
-        return AppRoutes.onboarding;
+      if (!profile.onboardingDone) {
+        return isOnboarding ? null : AppRoutes.onboarding;
       }
-      if (!profile.isReady && isOnboarding) {
-        return AppRoutes.profile;
+      if (!profile.isReady) {
+        return isProfile ? null : AppRoutes.profile;
       }
-      if (profile.isReady && (isOnboarding || isProfile)) {
-        return AppRoutes.tasks;
-      }
-      return null;
+      return (isOnboarding || isProfile) ? AppRoutes.tasks : null;
     },
     routes: [
       GoRoute(

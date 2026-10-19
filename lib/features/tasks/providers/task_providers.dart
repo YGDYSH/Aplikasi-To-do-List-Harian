@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show TasksCompanion, Value;
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
